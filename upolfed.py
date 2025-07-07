@@ -8,33 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse.linalg as spla
 
-#email stuff -----------------
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-
-def send_email(subject, body, to_email, from_email, smtp_server, smtp_port, smtp_user, smtp_pass, use_tls=True):
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = from_email
-    msg["To"] = to_email
-
-    try:
-        if use_tls:
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            server.starttls()
-        else:
-            server = smtplib.SMTP_SSL(smtp_server, smtp_port)
-
-        server.login(smtp_user, smtp_pass)
-        server.send_message(msg)
-        server.quit()
-        print("✅ Email sent.")
-    except Exception as e:
-        print("❌ Error:", e)
-
 #-------------------------
 
 # Pauli matrices
@@ -122,16 +95,24 @@ class GeometricFilteredOperator(spla.LinearOperator):
         return apply_geometric_filter(v, self.L, self.J, self.b, self.k, self.phi_tgt, self.h_vec)
 
 # --- Level spacing plot ---
-def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=50, k=None, ncv=None, disorder=False):
+def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=None, disorder=False):
     d = 2 ** L
     
-    if ncv is None:
-        ncv = min(d, 2 * nev + 20)
+    nev = int(min((2**L/10),1000))
+    nev=225
+    #print(nev)
+    ncv = int(2 * nev)
+    #print(ncv)
+    k = int(0.95 * (2**(L+1))/ncv)
+    #print(k)
     
-    #if k is None:
-        #k = (0.95 * (2**L))/ncv
+    #nev=225
+    #ncv = min(d, 2 * nev + 20)
+    #k = 500
     
-    if k is None: k=700
+    
+    
+    #if k is None: k=700
     
     h_vec = np.random.uniform(0.6, np.pi/4, size=L).astype(np.float32) if disorder else None
 
@@ -148,20 +129,21 @@ def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=50, k=None, ncv=No
     zz = zz_gate(J)
 
     U_proj = np.zeros((nev, nev), dtype=np.complex64)
+    
     psi_nexts = [apply_floquet(eigvecs[:, i], L, J, b, h_vec, Rx=Rx, zz=zz) for i in range(nev)]
+    
     for i in range(nev):
         for j in range(i, nev):
             U_proj[i, j] = np.vdot(eigvecs[:, j], psi_nexts[i])
             if i != j:
                 U_proj[j, i] = np.conj(U_proj[i, j])
 
-    #lambdas = np.linalg.eigvals(U_proj)
-    
+    # final diagonalisation    
     eigenvalues, eigenvectors = np.linalg.eig(U_proj)
     
     lambdas = eigenvalues
     
-    # Sort by phase (quasienergy)
+    # Sort by phase (quasienergy) sorting for von numen entropy 
     quasienergies = np.angle(eigenvalues)
     sorted_indices = np.argsort(quasienergies)
     eigenvalues = eigenvalues[sorted_indices]
@@ -169,64 +151,22 @@ def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=50, k=None, ncv=No
     
     #dump eigenvectors
     np.savetxt("psi.csv", eigenvectors, delimiter=",")
-    
+
+    # dump phases
     phases = np.sort(np.mod(np.angle(lambdas), 2 * np.pi))
     np.savetxt("phases.csv", phases, delimiter=",")
-    #phase density
-    plt.figure()
-    plt.hist(phases, bins=100, density=True, alpha=0.8, color='gray')
-    plt.title("Phase Density Before Level Spacing")
-    plt.xlabel("Phase")
-    plt.ylabel("Density")
-    plt.tight_layout()
-    plt.show()
-
+    
+    #calculate and dump spacings
     spacings = np.diff(phases)
     spacings = np.append(spacings, 2 * np.pi - phases[-1] + phases[0])
 
-    print(f"Max spacing: {np.max(spacings):.4f}")
-    print(f"Spacing std: {np.std(spacings):.4f}")
-
     clip_max = 4.0
-    #spacings = spacings[spacings < clip_max]
+    spacings = spacings[spacings < clip_max]
     spacings /= np.mean(spacings)
     np.savetxt("spacings.csv", spacings, delimiter=",")
-
-    s = np.linspace(0, clip_max, 200)
-    P_goe = (np.pi / 2) * s * np.exp(-np.pi * s ** 2 / 4)
-    coe_pdf = (np.pi / 2) * s * np.exp(- (np.pi / 4) * s**2)  # Wigner-Dyson (COE)
-    P_poisson = np.exp(-s)
-
-    hist_vals, bin_edges = np.histogram(spacings, bins=70, density=True)
-    np.savetxt("histogram.csv", np.vstack((bin_edges[:-1], hist_vals)).T, delimiter=",")
-    # Level Spacings Plot
-    plt.hist(spacings, bins=70, density=True, alpha=0.6, label="Level spacings")
-    plt.plot(s, coe_pdf, label="COE", lw=2)
-    plt.plot(s, P_poisson, label="Poisson", lw=2)
-    plt.xlabel("s")
-    plt.ylabel("P(s)")
-    plt.xlim(0, clip_max)
-    plt.title(f"Kicked Field Ising Model, L={L}, J={J:.2f}, b={b:.2f}")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig("spacing_plot.png")  # Save before plt.show()
-    plt.show()
-    #sending the email
-    send_email(
-        subject=f" L = {L}, for n={nev} POLFED Simulation Run Completed",
-        body=f"Your simulation has finished running for L={L},n={nev},phi={phi_tgt}",
-        to_email="adityan041414@gmail.com",
-        from_email="adityan041414@gmail.com",
-        smtp_server="smtp.gmail.com",
-        smtp_port=587,
-        smtp_user="adityan041414@gmail.com",
-        smtp_pass="aiegntirytmwdpvu",
-        use_tls=True
-    )
     
 # --- Run example ---
 if __name__ == "__main__":
-    run_level_spacing(L=14, J=np.pi/4, b=np.pi/4, nev=254, phi_tgt=np.pi/2, disorder=True)
+    run_level_spacing(L=8, J=np.pi/4, b=np.pi/4, phi_tgt=np.pi/2, disorder=True)
 
 
