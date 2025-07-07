@@ -32,8 +32,8 @@ def read_complex_csv(filename):
 
 
 # Load data
-phases = np.loadtxt("./L14/phases.csv", delimiter=",")
-eigenvectors = read_complex_csv("./L14/psi.csv")
+phases = np.loadtxt("phases.csv", delimiter=",")
+eigenvectors = read_complex_csv("psi.csv")
 #eigenvectors = np.loadtxt("./L14/psi.csv", delimiter=",", dtype=np.complex64)  
 
 # --- Plot 1: Histogram of phases ---
