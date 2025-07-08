@@ -23,7 +23,7 @@ def apply_single_site_gate(psi, gate, site, L):
     return psi.reshape(-1)
 
 # --- Diagonal Z + ZZ phase shift (Numba compatible) ---
-@njit(parallel=True)
+@njit
 def apply_combined_z_diagonal_spin1(psi, h_vec, J, L):
     d = 3 ** L
     out = np.empty_like(psi)
@@ -89,9 +89,10 @@ class GeometricFilteredOperator(spla.LinearOperator):
 def run_level_spacing(L=6, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=None, disorder=False):
     d = 3 ** L
     nev = min(500, d - 2)
+    nev = 225
     ncv = min(d, 2 * nev + 20)
     k = int(0.95 * (3 ** (L + 1)) / ncv)
-
+    k = 31
     h_vec = np.random.uniform(0.6, np.pi/4, size=L).astype(np.float32) if disorder else None
     print(f"[POLFED-Spin1] L={L}, J={J:.3f}, b={b:.3f}, k={k}, nev={nev}, disorder={disorder}")
 
@@ -112,7 +113,7 @@ def run_level_spacing(L=6, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=
                 U_proj[j, i] = np.conj(U_proj[i, j])
 
     eigenvalues, eigenvectors = np.linalg.eig(U_proj)
-    lambdas = eigenvalues
+    
 
     quasienergies = np.angle(eigenvalues)
     sorted_indices = np.argsort(quasienergies)
@@ -120,15 +121,24 @@ def run_level_spacing(L=6, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=
     eigenvectors = eigenvectors[:, sorted_indices]
 
     np.savetxt("psi.csv", eigenvectors, delimiter=",")
-    phases = np.sort(np.mod(np.angle(lambdas), 2 * np.pi))
+    
+    phases = np.mod(np.angle(eigenvalues), 2 * np.pi)
+    phases = np.sort(phases)
+    
+    print("Raw quasienergies:")
+    print(phases[:10], "...", phases[-10:])
+    print("Phase range (max - min):", np.max(phases) - np.min(phases))
+    print("Phase differences (first few):", np.diff(phases[:10]))
+
+    
     np.savetxt("phases.csv", phases, delimiter=",")
     spacings = np.diff(phases)
-    spacings = np.append(spacings, 2 * np.pi - phases[-1] + phases[0])
-    clip_max = 4.0
-    spacings = spacings[spacings < clip_max]
+    #spacings = np.append(spacings, 2 * np.pi - phases[-1] + phases[0])
+    #clip_max = 5.0
+    #spacings = spacings[spacings < clip_max]
     spacings /= np.mean(spacings)
     np.savetxt("spacings.csv", spacings, delimiter=",")
 
 # --- Run example ---
 if __name__ == "__main__":
-    run_level_spacing(L=6, J=np.pi/4, b=np.pi/4, phi_tgt=np.pi/2, disorder=True)
+    run_level_spacing(L=10, J=np.pi/4, b=np.pi/4, phi_tgt=np.pi/2, disorder=True)
