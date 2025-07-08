@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from mpl_toolkits.mplot3d import Axes3D
-import re
+import math
 
 
 def read_complex_csv(filename):
@@ -69,4 +69,32 @@ plt.grid(True)
 plt.tight_layout()
 plt.savefig("spacing_from_phases.png")
 plt.show()
+
+# --- Plot 3: Phase spacings ---
+D = len(phase)
+result = []
+t = [0,(3*D)]
+a = 0
+for i in t:
+    for y in phases:
+        a += math.exp()
+    g = (1/D)
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -14,3 +14,13 @@ ncv = int(2 * nev)
 print(ncv)
 k = int(0.95 * (2**(L+1))/ncv)
 print(k)
+i=1
+print("################")
+while i<25:
+    print('powers: ',i,":", 2**i)
+    i += 1
+i=1
+print("################")
+while i<25:
+    print('powers: ',i,":", 3**i)
+    i += 1
