@@ -7,7 +7,7 @@ Created on Mon Jul  7 11:59:06 2025
 """
 
 L = 10
-print(2**L)
+print(4**L)
 nev = int(min((2**L/10),1000))
 print(nev)
 ncv = int(2 * nev)
@@ -22,5 +22,5 @@ while i<25:
 i=1
 print("################")
 while i<25:
-    print('powers: ',i,":", 3**i)
+    print('powers: ',i,":", 4**i)
     i += 1

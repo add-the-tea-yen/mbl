@@ -42,10 +42,12 @@ def apply_combined_z_diagonal_numba(psi, h_vec, J, L):
 
 # --- Floquet operator application (optimized) ---
 def apply_floquet(psi, L, J, b, h_vec=None, Rx=None):
-    if h_vec is not None:
-        psi = apply_combined_z_diagonal_numba(psi, h_vec, J, L)
     if Rx is None:
         Rx = rx_gate(b)
+    if h_vec is not None:
+        psi = apply_combined_z_diagonal_numba(psi, h_vec, J, L)
+    #if Rx is None:
+        #Rx = rx_gate(b)
     for j in range(L):
         psi = apply_single_qubit_gate(psi, Rx, j, L)
     return psi
@@ -78,10 +80,10 @@ class GeometricFilteredOperator(spla.LinearOperator):
 # --- Level spacing plot ---
 def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=None, disorder=False):
     d = 2 ** L
-    nev = 1000
+    nev = 225
     ncv = int(2 * nev)
     k = int(0.95 * (2**(L+1)) / ncv)
-    k=31
+    #k=31
     h_vec = np.random.uniform(0.6, np.pi/4, size=L).astype(np.float32) if disorder else None
     print(f"[POLFED] L={L}, J={J:.3f}, b={b:.3f}, k={k}, nev={nev}, disorder={disorder}")
     G = GeometricFilteredOperator(L, J, b, k, phi_tgt, h_vec)
@@ -114,4 +116,4 @@ def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=
 
 # --- Run example ---
 if __name__ == "__main__":
-    run_level_spacing(L=14, J=np.pi/4, b=np.pi/4, phi_tgt=np.pi/2, disorder=True)
+    run_level_spacing(L=12, J=np.pi/4, b=np.pi/4, phi_tgt=np.pi/2, disorder=True)

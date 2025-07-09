@@ -32,8 +32,8 @@ def read_complex_csv(filename):
 
 
 # Load data
-phases = np.loadtxt("./L16/phases.csv", delimiter=",")
-eigenvectors = read_complex_csv("psi.csv")
+phases = np.loadtxt("./phases.csv", delimiter=",")
+eigenvectors = read_complex_csv("./psi.csv")
 #eigenvectors = np.loadtxt("./L14/psi.csv", delimiter=",", dtype=np.complex64)  
 
 # --- Plot 1: Histogram of phases ---
@@ -51,8 +51,8 @@ plt.show()
 sorted_phases = np.sort(phases)
 spacings = np.diff(sorted_phases)
 spacings = np.append(spacings, 2 * np.pi - sorted_phases[-1] + sorted_phases[0])
-#clip_max = 5.0
-#spacings = spacings[spacings < clip_max]
+clip_max = 4.0
+spacings = spacings[spacings < clip_max]
 spacings = spacings / np.mean(spacings)
 
 plt.figure(figsize=(8, 4))
