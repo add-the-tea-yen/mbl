@@ -159,6 +159,8 @@ def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=50, k=None, ncv=No
     
     eigenvalues, eigenvectors = np.linalg.eig(U_proj)
     
+    
+    
     lambdas = eigenvalues
     
     # Sort by phase (quasienergy)
@@ -171,6 +173,7 @@ def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=50, k=None, ncv=No
     np.savetxt("psi.csv", eigenvectors, delimiter=",")
     
     phases = np.sort(np.mod(np.angle(lambdas), 2 * np.pi))
+    
     np.savetxt("phases.csv", phases, delimiter=",")
     #phase density
     plt.figure()

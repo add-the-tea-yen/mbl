@@ -3,53 +3,60 @@ import matplotlib.pyplot as plt
 import scipy.sparse.linalg as spla
 from numba import njit, prange
 
-# Pauli matrices
-I2 = np.eye(2, dtype=np.complex64)
-X = np.array([[0, 1], [1, 0]], dtype=np.complex64)
+# Spin-1 identity and spin operators
+I3 = np.eye(3, dtype=np.complex64)
+Sx = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.complex64) / np.sqrt(2)
+Sz = np.array([[1, 0, 0], [0, 0, 0], [0, 0, -1]], dtype=np.complex64)
 
 # --- Gate constructors ---
 def rx_gate(angle):
-    return np.cos(angle) * I2 - 1j * np.sin(angle) * X
+    return spla.expm(-1j * angle * Sx).astype(np.complex64)
 
-# --- Apply single-qubit gate ---
-def apply_single_qubit_gate(psi, gate, site, L):
-    psi = psi.reshape([2] * L)
+# --- Apply single-site gate ---
+def apply_single_site_gate(psi, gate, site, L):
+    psi = psi.reshape([3] * L)
     psi = np.moveaxis(psi, site, 0)
     shape = psi.shape
-    psi = psi.reshape(2, -1)
-    psi = (gate @ psi).reshape(2, *shape[1:])
+    psi = psi.reshape(3, -1)
+    psi = (gate @ psi).reshape(3, *shape[1:])
     psi = np.moveaxis(psi, 0, site)
     return psi.reshape(-1)
 
-# --- Optimized combined Z + ZZ gate using bitwise logic ---
-@njit(parallel=True)
-def apply_combined_z_diagonal_numba(psi, h_vec, J, L):
-    d = 1 << L
+# --- Diagonal Z + ZZ phase shift (Numba compatible) ---
+@njit
+def apply_combined_z_diagonal_spin1(psi, h_vec, J, L):
+    d = 3 ** L
     out = np.empty_like(psi)
     for s in prange(d):
+        x = s
         hz_sum = 0.0
         zz_sum = 0.0
-        z_prev = 1.0 if ((s >> 0) & 1) == 0 else -1.0
-        hz_sum += h_vec[0] * z_prev
-        for j in range(1, L):
-            z_curr = 1.0 if ((s >> j) & 1) == 0 else -1.0
-            hz_sum += h_vec[j] * z_curr
-            zz_sum += z_prev * z_curr
-            z_prev = z_curr
+        prev_sz = 0.0
+        for j in range(L):
+            digit = x % 3
+            if digit == 0:
+                sz = 1.0
+            elif digit == 2:
+                sz = -1.0
+            else:
+                sz = 0.0
+            hz_sum += h_vec[j] * sz
+            if j > 0:
+                zz_sum += sz * prev_sz
+            prev_sz = sz
+            x //= 3
         theta = -1j * (hz_sum + J * zz_sum)
         out[s] = np.exp(theta) * psi[s]
     return out
 
-# --- Floquet operator application (optimized) ---
+# --- Floquet operator ---
 def apply_floquet(psi, L, J, b, h_vec=None, Rx=None):
+    if h_vec is not None:
+        psi = apply_combined_z_diagonal_spin1(psi, h_vec, J, L)
     if Rx is None:
         Rx = rx_gate(b)
-    if h_vec is not None:
-        psi = apply_combined_z_diagonal_numba(psi, h_vec, J, L)
-    #if Rx is None:
-        #Rx = rx_gate(b)
     for j in range(L):
-        psi = apply_single_qubit_gate(psi, Rx, j, L)
+        psi = apply_single_site_gate(psi, Rx, j, L)
     return psi
 
 # --- Geometric filter using weighted complex exponential sum gk(U) ---
@@ -72,48 +79,66 @@ class GeometricFilteredOperator(spla.LinearOperator):
         self.k = k
         self.phi_tgt = phi_tgt
         self.h_vec = h_vec
-        self.d = 2 ** L
+        self.d = 3 ** L
         super().__init__(dtype=np.complex64, shape=(self.d, self.d))
+
     def _matvec(self, v):
         return apply_geometric_filter(v, self.L, self.J, self.b, self.k, self.phi_tgt, self.h_vec)
 
 # --- Level spacing plot ---
-def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=None, disorder=False):
-    d = 2 ** L
+def run_level_spacing(L=6, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=None, disorder=False):
+    d = 3 ** L
+    nev = min(500, d - 2)
     nev = 225
-    ncv = int(2 * nev)
-    k = int(0.95 * (2**(L+1)) / ncv)
-    #k=31
+    ncv = min(d, 2 * nev + 20)
+    k = int(0.95 * (3 ** (L + 1)) / ncv)
+    k = 31
     h_vec = np.random.uniform(0.6, np.pi/4, size=L).astype(np.float32) if disorder else None
-    print(f"[POLFED] L={L}, J={J:.3f}, b={b:.3f}, k={k}, nev={nev}, disorder={disorder}")
+    print(f"[POLFED-Spin1] L={L}, J={J:.3f}, b={b:.3f}, k={k}, nev={nev}, disorder={disorder}")
+
     G = GeometricFilteredOperator(L, J, b, k, phi_tgt, h_vec)
+
     v0 = (np.random.randn(d) + 1j * np.random.randn(d)).astype(np.complex64)
     v0 /= np.linalg.norm(v0)
+
     eigvals, eigvecs = spla.eigs(G, k=nev, which='LM', v0=v0, ncv=ncv)
-    Rx = rx_gate(b)
+
     U_proj = np.zeros((nev, nev), dtype=np.complex64)
-    psi_nexts = [apply_floquet(eigvecs[:, i], L, J, b, h_vec, Rx=Rx) for i in range(nev)]
+    psi_nexts = [apply_floquet(eigvecs[:, i], L, J, b, h_vec) for i in range(nev)]
+
     for i in range(nev):
         for j in range(i, nev):
             U_proj[i, j] = np.vdot(eigvecs[:, j], psi_nexts[i])
             if i != j:
                 U_proj[j, i] = np.conj(U_proj[i, j])
+
     eigenvalues, eigenvectors = np.linalg.eig(U_proj)
-    lambdas = eigenvalues
+    
+
     quasienergies = np.angle(eigenvalues)
     sorted_indices = np.argsort(quasienergies)
     eigenvalues = eigenvalues[sorted_indices]
     eigenvectors = eigenvectors[:, sorted_indices]
+
     np.savetxt("psi.csv", eigenvectors, delimiter=",")
-    phases = np.sort(np.mod(np.angle(lambdas), 2 * np.pi))
+    
+    phases = np.mod(np.angle(eigenvalues), 2 * np.pi)
+    phases = np.sort(phases)
+    
+    print("Raw quasienergies:")
+    print(phases[:10], "...", phases[-10:])
+    print("Phase range (max - min):", np.max(phases) - np.min(phases))
+    print("Phase differences (first few):", np.diff(phases[:10]))
+
+    
     np.savetxt("phases.csv", phases, delimiter=",")
     spacings = np.diff(phases)
-    spacings = np.append(spacings, 2 * np.pi - phases[-1] + phases[0])
-    clip_max = 4.0
-    spacings = spacings[spacings < clip_max]
+    #spacings = np.append(spacings, 2 * np.pi - phases[-1] + phases[0])
+    #clip_max = 5.0
+    #spacings = spacings[spacings < clip_max]
     spacings /= np.mean(spacings)
     np.savetxt("spacings.csv", spacings, delimiter=",")
 
 # --- Run example ---
 if __name__ == "__main__":
-    run_level_spacing(L=12, J=np.pi/4, b=np.pi/4, phi_tgt=np.pi/2, disorder=True)
+    run_level_spacing(L=10, J=np.pi/4, b=np.pi/4, phi_tgt=np.pi/2, disorder=True)
