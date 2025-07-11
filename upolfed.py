@@ -78,7 +78,7 @@ class GeometricFilteredOperator(spla.LinearOperator):
         return apply_geometric_filter(v, self.L, self.J, self.b, self.k, self.phi_tgt, self.h_vec)
 
 # --- Level spacing plot ---
-def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=None, disorder=False):
+def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=None, disorder=False, fphases, fpsi):
     d = 2 ** L
     nev = 225
     ncv = int(2 * nev)
@@ -104,16 +104,10 @@ def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=
     sorted_indices = np.argsort(quasienergies)
     eigenvalues = eigenvalues[sorted_indices]
     eigenvectors = eigenvectors[:, sorted_indices]
-    np.savetxt("psi.csv", eigenvectors, delimiter=",")
+    np.savetxt(fpsi, eigenvectors, delimiter=",")
     phases = np.sort(np.mod(np.angle(lambdas), 2 * np.pi))
-    np.savetxt("phases.csv", phases, delimiter=",")
-    spacings = np.diff(phases)
-    spacings = np.append(spacings, 2 * np.pi - phases[-1] + phases[0])
-    clip_max = 4.0
-    spacings = spacings[spacings < clip_max]
-    spacings /= np.mean(spacings)
-    np.savetxt("spacings.csv", spacings, delimiter=",")
+    np.savetxt(fphases,phases, delimiter=",")
 
 # --- Run example ---
 if __name__ == "__main__":
-    run_level_spacing(L=12, J=np.pi/4, b=np.pi/4, phi_tgt=np.pi/2, disorder=True)
+    run_level_spacing(L=12, J=np.pi/4, b=np.pi/4, phi_tgt=np.pi/2, disorder=True, fphases="phases.csv",fpsi="psi.csv")
