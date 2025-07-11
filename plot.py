@@ -32,8 +32,9 @@ def read_complex_csv(filename):
 
 
 # Load data
-phases = np.loadtxt("./phases.csv", delimiter=",")
-eigenvectors = read_complex_csv("./psi.csv")
+phases = np.loadtxt("./L14/phases.csv", delimiter=",")
+print(len(phases))
+eigenvectors = read_complex_csv("./L14/psi.csv")
 #eigenvectors = np.loadtxt("./L14/psi.csv", delimiter=",", dtype=np.complex64)  
 
 # --- Plot 1: Histogram of phases ---
@@ -44,7 +45,7 @@ plt.ylabel("Density")
 plt.title("Eigenphase Distribution")
 plt.grid(True)
 plt.tight_layout()
-plt.savefig("eigenphase_histogram.png")
+plt.savefig("./figs/eigenphase_histogram.png")
 plt.show()
 
 # --- Plot 2: Phase spacings ---
@@ -67,7 +68,7 @@ plt.title("Level Spacing Distribution")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.savefig("spacing_from_phases.png")
+plt.savefig("./figs/spacing_from_phases.png")
 plt.show()
 
 """# --- Plot 3: Phase spacings ---
@@ -110,8 +111,61 @@ ax.set_ylim([-1.1, 1.1])
 ax.grid(True, linestyle='--', alpha=0.5)
 ax.legend()
 plt.tight_layout()
-plt.savefig("unit_circle_convergence.png")
+plt.savefig("./figs/unit_circle_convergence.png")
 plt.show()
+
+
+
+
+# Fock Baiss 
+
+def load_complex_csv(filepath):
+    with open(filepath, 'r') as f:
+        lines = f.readlines()
+
+    data = []
+    for line in lines:
+        entries = line.strip().split()
+        # remove parentheses and convert to complex
+        row = [complex(entry.strip("()")) for entry in entries]
+        data.append(row)
+
+    return np.array(data, dtype=np.complex64)
+
+# Usage:
+evecs = load_complex_csv("./L14/psi.csv")
+
+
+
+# If it's complex stored as real+imag parts (shape d x 2*nev), fix this
+if evecs.shape[1] % 2 == 0:
+    nev = evecs.shape[1] // 2
+    evecs = evecs[:, :nev] + 1j * evecs[:, nev:]
+
+# Compute probability weight in Fock basis
+weights = np.abs(evecs) ** 2  # shape: (d, nev)
+
+# Normalize each column (should already be, but just to be sure)
+weights /= np.sum(weights, axis=0, keepdims=True)
+
+# Sort eigenstates by quasienergy (optional)
+# phis = np.loadtxt("phases.csv", delimiter=",")
+# sorted_idx = np.argsort(phis)
+# weights = weights[:, sorted_idx]
+
+# Plot heatmap
+plt.figure(figsize=(10, 6))
+plt.imshow(weights.T, aspect='auto', cmap='inferno', origin='lower')
+plt.xlabel("Fock Basis State Index")
+plt.ylabel("Eigenvector Index")
+plt.title("Fock Basis Weight Distribution")
+plt.colorbar(label="Probability Weight")
+plt.tight_layout()
+plt.show()
+
+
+
+
 
 
 
