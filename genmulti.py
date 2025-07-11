@@ -8,10 +8,11 @@ import time
 
 start = time.time()
 
-def EDUM(s,psi,phases):
+def EDUM(L,s,psi,phases):
     # ------------------------------ parameters ------------------------------
     
-    spins = [1,1,1,1,1,1] 
+    #spins = [1,1,1,1,1,1] 
+    spins = [s for x in range(L)]
     
     L = len(spins)                      # Chain length
     J = np.pi/4               # Ising ZZ coupling strength
