@@ -11,11 +11,10 @@ import os
 from mpl_toolkits.mplot3d import Axes3D
 import math
 
-def plotPhases(phases):
+def plotPhases(fphases):
     # Load data
-    phases = np.loadtxt("./L14/phases.csv", delimiter=",")
+    phases = np.loadtxt(fphases, delimiter=",")
     print(len(phases))
-    eigenvectors = read_complex_csv("./L14/psi.csv")
     #eigenvectors = np.loadtxt("./L14/psi.csv", delimiter=",", dtype=np.complex64)  
     
     # --- Plot 1: Histogram of phases ---
@@ -85,7 +84,7 @@ def plotPhases(phases):
 
 
 # Fock Baiss 
-def plotFockBasis(psi):
+def plotFockBasis(fpsi):
     def load_complex_csv(filepath):
         with open(filepath, 'r') as f:
             lines = f.readlines()
@@ -100,7 +99,7 @@ def plotFockBasis(psi):
         return np.array(data, dtype=np.complex64)
     
     # Usage:
-    evecs = load_complex_csv("./L14/psi.csv")
+    evecs = load_complex_csv(fpsi)
     
     
     
@@ -130,8 +129,107 @@ def plotFockBasis(psi):
     plt.tight_layout()
     plt.show()
 
+def plotAreaVolume(fpsi):
+    def load_complex_csv(filepath):
+        with open(filepath, 'r') as f:
+            lines = f.readlines()
+    
+        data = []
+        for line in lines:
+            entries = line.strip().split()
+            # remove parentheses and convert to complex
+            row = [complex(entry.strip("()")) for entry in entries]
+            data.append(row)
+    
+        return np.array(data, dtype=np.complex64)
+    
+    # Usage:
+    evecs = load_complex_csv(fpsi)
+    #print(evecs)
+    L=[x for x in range(7,15)]
+    for i in L:
+        print(i)
+        psi = load_complex_csv(fpsi)
+        #psi = fspi
+        print(psi)
+        ipr = np.sum(np.abs(psi)**4)
+        #iprs.append(ipr)
+    #plt.plot(Ls, np.log(iprs),'o-')
+    #plt.xlabel("System Size L")
+    #plt.ylabel("log of IPR")
 
 
+
+def read_complex_psi(filename, L):
+    """Read complex eigenvectors from psi.csv with (a+bj) format."""
+    with open(filename, "r") as f:
+        content = f.read()
+
+    # Parse complex numbers
+    raw = content.replace("(", "").replace(")", "").replace("\n", " ").split()
+    data = np.array([complex(s) for s in raw], dtype=np.complex64)
+
+    d = 2 ** L
+    nev = len(data) // d
+    assert len(data) == d * nev, "Mismatch in psi size"
+
+    psi = data.reshape((d, nev))
+    return psi
+
+def plotEchoTime(phases_file, psi_file, L, N_plot=1000):
+    # Load data
+    phases = np.loadtxt(phases_file, delimiter=",")
+    psi = read_complex_psi(psi_file, L)
+
+    nev = psi.shape[1]
+    phases_truncated = phases[:nev]  # Ensure matching dimensions
+
+    print(f"Loaded psi shape: {psi.shape}, Phases: {len(phases_truncated)}")
+
+    # Define initial state |psi0⟩ = all spins down
+    psi0 = np.zeros(2 ** L, dtype=np.complex64)
+    psi0[0] = 1.0
+
+    # Overlaps ⟨ψ_n|ψ0⟩
+    proj = np.conj(psi.T) @ psi0
+
+    # Time range (scaled by system size N=L)
+    tau_vals = np.linspace(0, 10, N_plot)
+    t_vals = L * tau_vals
+
+    L_t = []
+    f_t = []
+
+    for t in t_vals:
+        amp = np.sum(proj * np.exp(-1j * phases_truncated * t))
+        L_t_val = np.abs(amp)**2
+        L_t.append(L_t_val)
+        f_t.append(-np.log(L_t_val) / (2 * L**2))
+
+    L_t = np.array(L_t)
+    f_t = np.array(f_t)
+
+    # --- Plot Loschmidt Echo ---
+    plt.figure(figsize=(10, 5))
+    plt.plot(tau_vals, L_t, label="Loschmidt Echo |L(t)|²", color='blue')
+    plt.xlabel(r"$\tau = t / L$")
+    plt.ylabel(r"$|L(t)|^2$")
+    plt.title("Dynamical Quantum Phase Transition: Loschmidt Echo")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    # --- Plot Dynamical Free Energy ---
+    plt.figure(figsize=(10, 5))
+    plt.plot(tau_vals, f_t, label=r"Dynamical Free Energy $f_N(\tau)$", color='red')
+    plt.xlabel(r"$\tau = t / L$")
+    plt.ylabel(r"$f_N(\tau)$")
+    plt.title("Dynamical Free Energy Density")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
 
 

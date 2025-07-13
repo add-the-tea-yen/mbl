@@ -8,7 +8,7 @@ import time
 
 start = time.time()
 
-def EDUM(L,s,psi,phases):
+def EDUM(L,s,fpsi,fphases):
     # ------------------------------ parameters ------------------------------
     
     #spins = [1,1,1,1,1,1] 
@@ -113,7 +113,7 @@ def EDUM(L,s,psi,phases):
     phases = np.sort(np.mod(np.angle(lambdas), 2 * np.pi))
 
     # Export
-    np.savetxt(psi, eigenvectors, delimiter=",")
+    np.savetxt(fpsi, eigenvectors, delimiter=",")
     
-    np.savetxt(phases, phases, delimiter=",")
+    np.savetxt(fphases, phases, delimiter=",")
     
