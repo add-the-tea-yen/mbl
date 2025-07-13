@@ -11,6 +11,17 @@ import os
 from mpl_toolkits.mplot3d import Axes3D
 import math
 
+def load_complex_psi(filename):
+    with open(filename, 'r') as f:
+        content = f.read()
+    # Remove parentheses, commas, newlines
+    content = content.replace('(', '').replace(')', '').replace(',', ' ')
+    # Split by whitespace
+    tokens = content.strip().split()
+    # Parse each token as complex
+    psi = np.array([complex(s) for s in tokens], dtype=np.complex64)
+    return psi
+
 def plotPhases(fphases):
     # Load data
     phases = np.loadtxt(fphases, delimiter=",")
@@ -130,33 +141,19 @@ def plotFockBasis(fpsi):
     plt.show()
 
 def plotAreaVolume(fpsi):
-    def load_complex_csv(filepath):
-        with open(filepath, 'r') as f:
-            lines = f.readlines()
-    
-        data = []
-        for line in lines:
-            entries = line.strip().split()
-            # remove parentheses and convert to complex
-            row = [complex(entry.strip("()")) for entry in entries]
-            data.append(row)
-    
-        return np.array(data, dtype=np.complex64)
-    
     # Usage:
-    evecs = load_complex_csv(fpsi)
+    evecs = load_complex_psi(fpsi)
     #print(evecs)
-    L=[x for x in range(7,15)]
-    for i in L:
+    iprs = []
+    L = [x for x in range(7,16)]
+    for i in evecs:
         print(i)
-        psi = load_complex_csv(fpsi)
         #psi = fspi
-        print(psi)
-        ipr = np.sum(np.abs(psi)**4)
-        #iprs.append(ipr)
-    #plt.plot(Ls, np.log(iprs),'o-')
-    #plt.xlabel("System Size L")
-    #plt.ylabel("log of IPR")
+        ipr = np.sum(np.abs(i)**4)
+        iprs.append(ipr)
+    plt.plot(L, np.log(iprs),'o-')
+    plt.xlabel("System Size L")
+    plt.ylabel("log of IPR")
 
 
 
