@@ -39,10 +39,10 @@ def loschmidt_echo(phases, psi_eigvecs, psi0, times):
     f_t = -np.log(L_t) / len(psi0)
 
     return L_t, f_t, G_t
-phases = np.loadtxt("./spins/half/L15_phases.csv")
-psi_eigvecs = load_complex_psi("./spins/half/L15_psi.csv")  # Use your custom loader
+phases = np.loadtxt("./sorted_phases.csv")
+psi_eigvecs = load_complex_psi("./sorted_eigenvalues.csv")  # Use your custom loader
 
-L = int(np.log2(psi_eigvecs.shape[0]))  # for spin-1/2
+L = int(np.log4(psi_eigvecs.shape[0]))  # for spin-1/2
 # For spin-3/2 use log base 4
 
 # Initial state (all spins up in computational basis)
