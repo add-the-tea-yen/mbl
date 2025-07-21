@@ -8,7 +8,9 @@ Simple scripts to run and do statistics on many body localisation related Simula
 The code for the floquet operators generate phases.csv and psi.csv files which can be used for statistical treatment with plot.py in main.py
 
 ## To do
-
+- [ ] Extend POLFED functionality for more than one spin value 
+- [ ] Add automatic benchmarking for POLFED
+- [ ] Abstractions 
 
 ## List of Functions and their usage
 ```py
