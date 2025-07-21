@@ -1,31 +1,17 @@
+
 import numpy as np
-from genmulti import EDUM
-from plot import *
-
-#plotAreaVolume('./spins/half/L14/psi.csv')
-L = [x for x in range(7,16)]
-#for i in L:
-    #plotPhases(f'./spins/half/L{i}_phases.csv')
-
-#plotEchoTime('./spins/half/L14/phases.csv','./spins/half/L14/psi.csv',14)
-
-
 import matplotlib.pyplot as plt
 
 def load_complex_psi(filename):
     with open(filename, 'r') as f:
         content = f.read()
-    # Remove parentheses, commas, newlines
     content = content.replace('(', '').replace(')', '').replace(',', ' ')
-    # Split by whitespace
     tokens = content.strip().split()
-    # Parse each token as complex
     psi = np.array([complex(s) for s in tokens], dtype=np.complex64)
     return psi
 
-
 def loschmidt_echo(phases, psi_eigvecs, psi0, times):
-    overlaps = np.conj(psi_eigvecs.T) @ psi0  # ⟨φ_n|ψ₀⟩
+    overlaps = np.conj(psi_eigvecs.T) @ psi0
     weights = np.abs(overlaps)**2
 
     G_t = []
@@ -39,23 +25,26 @@ def loschmidt_echo(phases, psi_eigvecs, psi0, times):
     f_t = -np.log(L_t) / len(psi0)
 
     return L_t, f_t, G_t
+
 def return_probability(L_t):
     return np.mean(L_t[-50:])  # Long-time average
 
-phases = np.loadtxt("./spins/half/L12_phases.csv")
-psi_eigvecs = load_complex_psi("./spins/half/L12_psi.csv")  # Use your custom loader
+# --- Load data ---
+phases = np.loadtxt("./haha.csv")
+psi_raw = load_complex_psi("./Book1.csv")
 
-L = int(np.log2(psi_eigvecs.shape[0]))  # for spin-1/2
-# For spin-3/2 use log base 4
+# --- Determine dimensions ---
+nev = len(phases)
+dim = len(psi_raw) // nev
+print(dim)
+assert dim * nev == len(psi_raw), f"Size mismatch! Got {len(psi_raw)}, expected {dim}×{nev}."
+psi_eigvecs = psi_raw.reshape((dim, nev))
 
-# Initial state (all spins up in computational basis)
-dim = 2 ** L
-nev = len(psi_eigvecs) // dim
-psi_eigvecs = psi_eigvecs.reshape((dim, nev))
+# --- Initial state in full space ---
+psi0 = np.zeros(dim, dtype=np.complex64)
+psi0[0] = 1.0  # |↑↑↑...⟩
 
-psi0 = np.zeros(dim, dtype=complex)
-psi0[0] = 1.0
-
+# --- Time evolution ---
 times = np.linspace(0, 100, 500)
 
 L_t, f_t, G_t = loschmidt_echo(phases, psi_eigvecs, psi0, times)
@@ -64,7 +53,7 @@ L_t, f_t, G_t = loschmidt_echo(phases, psi_eigvecs, psi0, times)
 ret_prob = return_probability(L_t)
 print(f"Return probability: {ret_prob:.4f}")
 
-# Plot
+# --- Plot ---
 plt.figure(figsize=(8,6))
 plt.plot(times, f_t, label="Dynamical Free Energy")
 plt.xlabel("Time")
@@ -73,4 +62,3 @@ plt.title("Loschmidt Echo")
 plt.grid(True)
 plt.legend()
 plt.show()
-
