@@ -7,7 +7,10 @@ Simple scripts to run and do statistics on many body localisation related Simula
 
 The code for the floquet operators generate phases.csv and psi.csv files which can be used for statistical treatment with plot.py in main.py
 
-# List of Functions and their usage
+## To do
+
+
+## List of Functions and their usage
 ```py
 from genmulti import EDUM
 EDUM(L,s,phases,psi)
