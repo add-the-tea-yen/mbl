@@ -24,7 +24,7 @@ from upolfed import run_level_spacings
 #run
 run_level_spacing(L=12, J=np.pi/4, b=np.pi/4, phi_tgt=np.pi/2, disorder=True, fphases="phases.csv",fpsi="psi.csv")
 #plot
-plotPhases(f'./spins/half/L{i}_phases.csv')
+plotPhases('./phases.csv')
 ```
 Description: This is an implementation of POLFED, ideally to be implemented with plot.py to check the distribution of eigenvalues on the complex circle. It required that you provide values to target where
 the filtered targets for eigenphases (phi_tgt). Additionally k (filter sharpness) and nev(number of eigenvalues) are also parameters of the function. This does not work with mixed chains 
