@@ -224,7 +224,7 @@ def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=50, k=None, ncv=No
         smtp_server="smtp.gmail.com",
         smtp_port=587,
         smtp_user="adityan041414@gmail.com",
-        smtp_pass="aiegntirytmwdpvu",
+        smtp_pass="",
         use_tls=True
     )
     

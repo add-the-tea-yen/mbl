@@ -42,12 +42,13 @@ def apply_combined_z_diagonal_numba(psi, h_vec, J, L):
 
 # --- Floquet operator application (optimized) ---
 def apply_floquet(psi, L, J, b, h_vec=None, Rx=None):
-    if Rx is None:
-        Rx = rx_gate(b)
+    # The order here mirrors the application of the two terms in the Unitary Operator, 
+    # Nearest Neighbour Interaction and Field
     if h_vec is not None:
         psi = apply_combined_z_diagonal_numba(psi, h_vec, J, L)
-    #if Rx is None:
-        #Rx = rx_gate(b)
+    # Transver Kick
+    if Rx is None:
+        Rx = rx_gate(b)
     for j in range(L):
         psi = apply_single_qubit_gate(psi, Rx, j, L)
     return psi
@@ -84,21 +85,30 @@ def run_level_spacing(L=8, J=np.pi/4, b=0.9, phi_tgt=0.0, nev=None, k=None, ncv=
     ncv = int(2 * nev)
     k = int(0.95 * (2**(L+1)) / ncv)
     #k=31
+    # randomly sample h 
     h_vec = np.random.uniform(0.6, np.pi/4, size=L).astype(np.float32) if disorder else None
     print(f"[POLFED] L={L}, J={J:.3f}, b={b:.3f}, k={k}, nev={nev}, disorder={disorder}")
+    # Apply the Geometric Filter
     G = GeometricFilteredOperator(L, J, b, k, phi_tgt, h_vec)
     v0 = (np.random.randn(d) + 1j * np.random.randn(d)).astype(np.complex64)
     v0 /= np.linalg.norm(v0)
     eigvals, eigvecs = spla.eigs(G, k=nev, which='LM', v0=v0, ncv=ncv)
+    
     Rx = rx_gate(b)
+    # Building the projected Matrix 
     U_proj = np.zeros((nev, nev), dtype=np.complex64)
+    
     psi_nexts = [apply_floquet(eigvecs[:, i], L, J, b, h_vec, Rx=Rx) for i in range(nev)]
+    
     for i in range(nev):
         for j in range(i, nev):
             U_proj[i, j] = np.vdot(eigvecs[:, j], psi_nexts[i])
             if i != j:
                 U_proj[j, i] = np.conj(U_proj[i, j])
+    
+    # Final Diagonalisation
     eigenvalues, eigenvectors = np.linalg.eig(U_proj)
+    
     lambdas = eigenvalues
     quasienergies = np.angle(eigenvalues)
     sorted_indices = np.argsort(quasienergies)

@@ -1,4 +1,4 @@
-
+import numpy as np
 
 import matplotlib.pyplot as plt
 
@@ -13,12 +13,12 @@ def load_complex_psi(filename):
     psi = np.array([complex(s) for s in tokens], dtype=np.complex64)
     return psi
 
-
 def loschmidt_echo(phases, psi_eigvecs, psi0, times):
     overlaps = np.conj(psi_eigvecs.T) @ psi0  # ⟨φ_n|ψ₀⟩
     weights = np.abs(overlaps)**2
 
     G_t = []
+
     for t in times:
         phase_factors = np.exp(-1j * phases * t)
         G = np.sum(weights * phase_factors)
@@ -29,9 +29,11 @@ def loschmidt_echo(phases, psi_eigvecs, psi0, times):
     f_t = -np.log(L_t) / len(psi0)
 
     return L_t, f_t, G_t
+
 def return_probability(L_t):
     return np.mean(L_t[-50:])  # Long-time average
 
+# dump
 phases = np.loadtxt("./spins/half/L12_phases.csv")
 psi_eigvecs = load_complex_psi("./spins/half/L12_psi.csv")  # Use your custom loader
 

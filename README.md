@@ -9,6 +9,7 @@ The code for the floquet operators generate phases.csv and psi.csv files which c
 
 ## To do
 - [ ] Extend POLFED functionality for more than one spin value 
+- [ ] Mixed Spin Chains in POLFED
 - [ ] Add automatic benchmarking for POLFED
 - [ ] Abstractions 
 
